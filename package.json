@@ -1,0 +1,17 @@
+{
+  "name": "fd-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Family Fixed Deposit tracker. Installable phone app; data stays on the phone.",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "demo": "node scripts/make-demo-backup.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
