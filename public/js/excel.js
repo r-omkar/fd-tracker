@@ -36,6 +36,8 @@ export const COLUMNS = [
   { key: 'nomineeShare', header: 'Nominee Share (%)', width: 12 },
   { key: 'status', header: 'Status', width: 12 },
   { key: 'notes', header: 'Notes', width: 30 },
+  { key: 'meantFor', header: 'Meant For', width: 22 },
+  { key: 'purpose', header: 'Purpose', width: 26 },
 ];
 
 // Header words (English + Marathi) that hint which field a column holds.
@@ -60,6 +62,8 @@ const SYNONYMS = {
   nomineeShare: ['share'],
   status: ['status', 'स्थिती'],
   notes: ['note', 'remark', 'comment', 'शेरा'],
+  meantFor: ['meant for', 'intended for', 'intended', 'for whom', 'kept for', 'beneficiary', 'कोणासाठी', 'लाभार्थी'],
+  purpose: ['purpose', 'goal', 'reason', 'उद्देश', 'हेतू'],
 };
 
 function scoreHeader(h, key) {
@@ -189,6 +193,7 @@ async function buildWorkbook(rows, withInstructions) {
       '• Amount: plain number, e.g. 100000 (commas are fine).',
       '• Institution Type: pick from the list (Bank, Co-operative Bank, Patasanstha, Post Office ...). If left empty, the app guesses from the name.',
       '• Joint Holders / Nominees: separate multiple names with ;  e.g.  Sunita Patil; Rahul Patil',
+      '• Meant For: if the FD is in one person\'s name but kept for someone else, write that person\'s name here. Leave empty if it is for the holder.',
       '• Marathi is fine for names and notes.',
       '• Delete the example row before importing.',
     ].forEach((t, i) => {
@@ -209,6 +214,7 @@ export function templateXlsx() {
     institutionType: 'Patasanstha Credit Society', branch: 'Main', fdNumber: '12345', amount: 100000, rate: 8.5,
     startDate: xlDate('2025-04-15'), maturityDate: xlDate('2026-04-15'), interestPayout: 'At maturity cumulative', maturityAmount: '',
     autoRenew: 'No', nomineeName: 'Rahul Patil', nomineeRelation: 'Son', nomineeShare: 100, status: 'Active', notes: 'Example row – delete me',
+    meantFor: 'Rahul Patil', purpose: 'Education',
   }], true);
 }
 
@@ -236,6 +242,8 @@ export function exportXlsx(fds, personName) {
       nomineeShare: fd.nominees.map((n) => n.share ?? '').join('; '),
       status: fd.status === 'active' ? 'Active' : fd.status === 'renewed' ? 'Renewed' : 'Closed',
       notes: fd.notes,
+      meantFor: fd.intendedForId && fd.intendedForId !== fd.holderId ? personName(fd.intendedForId) : '',
+      purpose: fd.purpose || '',
       daysLeft: fd.status === 'active' && fd.maturityDate ? daysBetween(today, fd.maturityDate) : '',
     }));
   return buildWorkbook(rows, false);

@@ -12,6 +12,7 @@ A calm, simple phone app for keeping track of the family's Fixed Deposits: whose
   - Breakdowns: by family member, by bank, and a 12-month maturity calendar.
   - Insights: the DICGC ₹5 lakh insurance check per person per bank, how much is in uninsured patasansthas and company FDs, FDs with no nominee, the spread of rates, and interest earned this financial year (useful for ITR and Form 15G/15H).
 - **All FDs:** large, easy-to-read cards with search, filters and sorting.
+- **"In whose name" vs "meant for":** each FD records whose name it is in and, if different, who it is really kept for (e.g. in Aaji's name, for Rahul's education), with an optional purpose. The Overview can total money either way, and the list can filter by "in their name" or "meant for them". DICGC insurance and interest-for-tax use the name on the FD, as banks do.
 - **Adding FDs**
   - **Type it in:** a 4-step form. Tap "1 year" and the maturity date and estimated maturity amount are filled in.
   - **From Excel / CSV:** columns are matched automatically (English or Marathi headers) and you can correct the matching. Everything is checked before saving, and FDs you've already saved are skipped. A template is included.

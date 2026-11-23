@@ -6,7 +6,7 @@ import {
 } from '../calc.js';
 
 export const blankDraft = () => ({
-  holderId: '', jointHolderIds: [], mode: 'Single', institutionName: '', institutionType: '', branch: '', fdNumber: '',
+  holderId: '', intendedForId: '', purpose: '', jointHolderIds: [], mode: 'Single', institutionName: '', institutionType: '', branch: '', fdNumber: '',
   amount: '', rate: '', startDate: '', maturityDate: '', interestPayout: 'cumulative', compounding: 'quarterly',
   maturityAmount: '', autoRenew: false, hasNominee: false, nominees: [], status: 'active', notes: '', photos: [],
 });
@@ -50,6 +50,15 @@ export function fdEditor(el, d, { extraPeople = [], showStatus = false, showErro
       ${others.length ? `<div class="field"><span class="label">Joint holders <span class="muted">(if any)</span></span>
         <div class="chips">${others.map((p) => `<button type="button" class="chip ${d.jointHolderIds.includes(p.id) ? 'on' : ''}" data-joint="${esc(p.id)}" aria-pressed="${d.jointHolderIds.includes(p.id)}">${d.jointHolderIds.includes(p.id) ? icon('check') : ''}${esc(p.name)}</button>`).join('')}</div></div>` : ''}
       ${d.jointHolderIds.length ? `<div class="field"><span class="label">Mode of operation</span>${seg('mode', MODES.slice(1).map((m) => [m, m]), d.mode)}</div>` : ''}
+      <div class="field"><label for="for-${uid}">Who is this FD meant for?</label>
+        <select class="input" id="for-${uid}" data-f="intendedForId">
+          ${opt('', d.holderId ? `Same person (${people().find((p) => p.id === d.holderId)?.name || 'holder'})` : 'Same person as the FD holder', !d.intendedForId || d.intendedForId === d.holderId)}
+          ${others.map((p) => opt(p.id, p.name, p.id === d.intendedForId)).join('')}
+          ${opt('__new', '+ Add a new person', false)}
+        </select>
+        <div class="hint">Change this when the FD is in one person's name but kept for someone else — for example, in Aaji's name for Rahul.</div></div>
+      <div class="field"><label for="pur-${uid}">Purpose <span class="muted">(optional)</span></label>
+        <input class="input" id="pur-${uid}" data-f="purpose" value="${esc(d.purpose || '')}" placeholder="e.g. Rahul's education, marriage, emergency fund"></div>
       <div class="field"><label for="inst-${uid}">Bank / patasanstha name</label>
         <input class="input ${bad('institutionName')}" id="inst-${uid}" data-f="institutionName" list="insts-${uid}" value="${esc(d.institutionName)}" autocomplete="off" placeholder="e.g. State Bank of India">
         <datalist id="insts-${uid}">${instNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>${errLine('institutionName')}</div>
@@ -137,17 +146,20 @@ export function fdEditor(el, d, { extraPeople = [], showStatus = false, showErro
   el.onchange = async (e) => {
     const t = e.target;
     if (!t.dataset.f) return;
-    if (t.dataset.f === 'holderId' && t.value === '__new') {
+    if (t.value === '__new' && ['holderId', 'intendedForId'].includes(t.dataset.f)) {
       const name = await dialog({ title: 'Add a family member', input: { label: 'Full name' }, ok: 'Add' });
       if (name && name.trim()) {
         const p = await db.addPerson(name);
         await reload();
-        d.holderId = p.id;
+        d[t.dataset.f] = p.id;
       }
       return draw();
     }
     d[t.dataset.f] = t.value;
-    if (t.dataset.f === 'holderId') d.jointHolderIds = d.jointHolderIds.filter((x) => x !== t.value);
+    if (t.dataset.f === 'holderId') {
+      d.jointHolderIds = d.jointHolderIds.filter((x) => x !== t.value);
+      if (d.intendedForId === t.value) d.intendedForId = '';
+    }
     if (t.dataset.f === 'institutionName' && !d.institutionType) {
       const g = guessType(t.value);
       if (g) { d.institutionType = g; el.querySelector('[data-f="institutionType"]').value = g; }

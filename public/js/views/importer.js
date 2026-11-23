@@ -25,7 +25,7 @@ const FIELD_LABELS = [
   ['institutionName', 'Bank / institution'], ['institutionType', 'Institution type'], ['branch', 'Branch'], ['fdNumber', 'FD / receipt no.'],
   ['amount', 'Amount'], ['rate', 'Interest rate'], ['startDate', 'Start date'], ['maturityDate', 'Maturity date'], ['tenure', 'Period / tenure'],
   ['interestPayout', 'Interest payout'], ['maturityAmount', 'Maturity amount'], ['autoRenew', 'Auto renew'],
-  ['nomineeName', 'Nominee name'], ['nomineeRelation', 'Nominee relation'], ['nomineeShare', 'Nominee share %'], ['status', 'Status'], ['notes', 'Notes'],
+  ['nomineeName', 'Nominee name'], ['nomineeRelation', 'Nominee relation'], ['nomineeShare', 'Nominee share %'], ['status', 'Status'], ['notes', 'Notes'], ['meantFor', 'Meant for (if not the holder)'], ['purpose', 'Purpose'],
 ];
 
 const splitList = (v) => String(v ?? '').split(/\s*(?:;|\n|\/|&|,|\band\b)\s*/i).map((s) => s.trim()).filter(Boolean);
@@ -55,6 +55,9 @@ function makeDraft(f, ctx) {
     return `new:${existing || key}`;
   };
   d.holderId = personFor(f.holder);
+  d.intendedForId = personFor(f.meantFor);
+  if (d.intendedForId === d.holderId) d.intendedForId = '';
+  d.purpose = String(f.purpose || '').trim();
   d.jointHolderIds = splitList(f.jointHolders).map(personFor).filter((id) => id && id !== d.holderId);
   if (d.jointHolderIds.length) d.mode = ['Either or Survivor', 'Former or Survivor', 'Anyone or Survivor', 'Jointly'].find((m) => String(f.mode || '').toLowerCase().startsWith(m.slice(0, 5).toLowerCase())) || 'Either or Survivor';
   d.institutionName = String(f.institutionName || '').trim();
@@ -116,6 +119,7 @@ function review(root, drafts, ctx, { title, back }) {
         <div>
           <div style="font-weight:650;font-size:1.05rem">${esc(d.institutionName || 'Bank not read')}</div>
           <div class="ink2">${esc(nameOf(d.holderId) || 'Name not read')}${d.jointHolderIds.length ? ' + ' + d.jointHolderIds.map(nameOf).map(esc).join(', ') : ''}</div>
+          ${d.intendedForId ? `<div class="for-line">For <b>${esc(nameOf(d.intendedForId))}</b>${d.purpose ? ` · ${esc(d.purpose)}` : ''}</div>` : ''}
           <div class="num" style="margin-top:.35rem"><b>${d.amount ? fmtINR(d.amount) : '₹ ?'}</b> at ${d.rate ? fmtRate(d.rate) : '?'} · ${isISO(d.startDate) ? fmtDate(d.startDate) : '?'} → ${isISO(d.maturityDate) ? fmtDate(d.maturityDate) : '?'}</div>
           ${errs.length ? `<p class="small" style="color:var(--danger-ink);font-weight:600;margin-top:.35rem">${errs.map((e) => esc(e[1])).join(' · ')}</p>` : ''}
           ${d.dupOf ? `<p class="small" style="color:var(--warn-ink);font-weight:600;margin-top:.35rem">This looks like an FD you already saved. It is unticked so it isn't added twice. <a href="#/fd/${d.dupOf}">View saved one</a></p>` : ''}
@@ -155,7 +159,7 @@ function review(root, drafts, ctx, { title, back }) {
     }
     btn.disabled = true;
     try {
-      const used = new Set(inc.flatMap((d) => [d.holderId, ...d.jointHolderIds]).filter((id) => id.startsWith('new:')).map((id) => id.slice(4)));
+      const used = new Set(inc.flatMap((d) => [d.holderId, d.intendedForId, ...d.jointHolderIds]).filter((id) => id && id.startsWith('new:')).map((id) => id.slice(4)));
       const fds = inc.map((d) => { const p = toPayload(d); delete p.dupOf; delete p.include; return p; });
       const saved = await db.createMany(fds, [...used]);
       await reload();

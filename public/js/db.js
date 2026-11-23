@@ -153,7 +153,7 @@ export async function renamePerson(id, name) {
   await commit();
 }
 export async function deletePerson(id) {
-  if (data.fds.some((f) => f.holderId === id || f.jointHolderIds.includes(id))) fail('This person has FDs. Move or delete those FDs first.');
+  if (data.fds.some((f) => f.holderId === id || f.intendedForId === id || f.jointHolderIds.includes(id))) fail('This person has FDs. Move or delete those FDs first.');
   data.people = data.people.filter((p) => p.id !== id);
   await commit();
 }
@@ -171,6 +171,8 @@ function cleanFd(input) {
     holderId: str(input.holderId, 40),
     jointHolderIds: Array.isArray(input.jointHolderIds) ? input.jointHolderIds.filter((id) => ids.has(id) && id !== input.holderId) : [],
     mode: pick(input.mode, MODES, 'Single'),
+    intendedForId: ids.has(input.intendedForId) && input.intendedForId !== input.holderId ? input.intendedForId : null,
+    purpose: str(input.purpose, 120),
     institutionName: str(input.institutionName, 120),
     institutionType: pick(input.institutionType, INSTITUTION_TYPES.map((t) => t.id), 'other'),
     branch: str(input.branch, 80),
@@ -229,7 +231,7 @@ export async function createMany(drafts, newPeople) {
   const errors = [];
   drafts.forEach((d, i) => {
     try {
-      out.push(stamp(cleanFd({ ...d, holderId: resolve(d.holderId), jointHolderIds: (d.jointHolderIds || []).map(resolve) }), born('excel')));
+      out.push(stamp(cleanFd({ ...d, holderId: resolve(d.holderId), intendedForId: resolve(d.intendedForId), jointHolderIds: (d.jointHolderIds || []).map(resolve) }), born('excel')));
     } catch (e) {
       errors.push(`FD ${i + 1}: ${e.message}`);
     }
@@ -313,7 +315,7 @@ export async function restoreBackup(bytes, password) {
   }
   const f = fresh();
   data = { ...f, ...b.db, auth: data.auth, settings: { ...data.settings, ...b.db.settings, alerts: data.settings.alerts }, meta: { ...f.meta, ...b.db.meta, lastBackupAt: new Date().toISOString() } };
-  data.fds = data.fds.map((x) => ({ photos: [], nominees: [], jointHolderIds: [], ...x }));
+  data.fds = data.fds.map((x) => ({ photos: [], nominees: [], jointHolderIds: [], intendedForId: null, purpose: '', ...x }));
   await commit();
   return { fds: data.fds.length, people: data.people.length };
 }

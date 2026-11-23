@@ -5,6 +5,8 @@ import {
   periodicPayout, typeInsurance, isISO,
 } from '../calc.js';
 import { statusPill } from './list.js';
+import { meantForId, isForSomeoneElse } from '../calc.js';
+
 
 const kv = (k, v, full = false) => `<div class="${full ? 'full' : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
 
@@ -49,9 +51,11 @@ export function render({ root, params: [id] }) {
       </section>
 
       <section class="card">
-        <h2 style="margin-bottom:.75rem">Holders</h2>
+        <h2 style="margin-bottom:.75rem">Whose FD</h2>
         <div class="kv">
           ${kv('In the name of', esc(personName(fd.holderId)))}
+          ${kv('Meant for', isForSomeoneElse(fd) ? `<span class="pill accent">${esc(personName(meantForId(fd)))}</span>` : 'Same person')}
+          ${fd.purpose ? kv('Purpose', esc(fd.purpose), true) : ''}
           ${kv('Mode of operation', esc(fd.jointHolderIds.length ? fd.mode : 'Single'))}
           ${fd.jointHolderIds.length ? kv('Joint holders', fd.jointHolderIds.map(personName).map(esc).join(', '), true) : ''}
         </div>

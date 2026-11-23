@@ -46,6 +46,12 @@ const fds = rows.map(([h, joint, inst, type, amount, rate, ago, ten, payout, nom
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   };
 });
+// Some FDs are in one person's name but meant for someone else
+const R = (i, who, purpose) => Object.assign(fds[i], { intendedForId: P[who], purpose });
+R(10, 'Rahul', "Rahul's higher education");
+R(12, 'Meera', 'Gift for Meera');
+R(19, 'Rahul', '');
+for (const f of fds) { f.intendedForId ??= null; f.purpose ??= ''; }
 // One renewal chain
 const old = { ...fds[0], id: id(), startDate: addMonths(fds[0].startDate, -12), maturityDate: fds[0].startDate, amount: 280000, rate: 6.9, status: 'renewed', closedOn: fds[0].startDate, renewedToId: fds[0].id };
 fds[0].renewedFromId = old.id;

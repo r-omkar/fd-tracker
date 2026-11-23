@@ -2,6 +2,7 @@ import { state, personName, esc, icon } from '../ui.js';
 import {
   todayISO, effectiveStatus, daysBetween, fmtINR, fmtShort, fmtRate, fmtDate, fmtDaysLeft, typeLabel, maturityValue,
 } from '../calc.js';
+import { meantForId, isForSomeoneElse } from '../calc.js';
 
 const STATUS_FILTERS = [
   ['active', 'Active'],
@@ -17,7 +18,8 @@ const SORTS = [
   ['inst', 'Bank name (A–Z)'],
   ['person', 'Person name (A–Z)'],
 ];
-const ui = { q: '', status: 'active', person: '', sort: 'maturity' };
+const RELS = [['any', 'All'], ['name', 'In their name'], ['for', 'Meant for them']];
+const ui = { q: '', status: 'active', person: '', rel: 'any', sort: 'maturity' };
 
 export function statusPill(fd, today = todayISO()) {
   const st = effectiveStatus(fd, today);
@@ -33,7 +35,8 @@ export function fdCard(fd, today) {
   const joint = fd.jointHolderIds.length ? ` + ${fd.jointHolderIds.map(personName).map(esc).join(', ')}` : '';
   return `<a class="fd-item" href="#/fd/${fd.id}">
     <div class="top">
-      <div style="min-width:0"><div class="inst">${esc(fd.institutionName)}</div><div class="who">${esc(personName(fd.holderId))}${joint}</div></div>
+      <div style="min-width:0"><div class="inst">${esc(fd.institutionName)}</div><div class="who">${esc(personName(fd.holderId))}${joint}</div>
+        ${isForSomeoneElse(fd) || fd.purpose ? `<div class="for-line">${isForSomeoneElse(fd) ? `For <b>${esc(personName(meantForId(fd)))}</b>` : ''}${isForSomeoneElse(fd) && fd.purpose ? ' · ' : ''}${esc(fd.purpose || '')}</div>` : ''}</div>
       <div><div class="amt num">${fmtINR(fd.amount)}</div><div class="muted small" style="text-align:right">${fmtRate(fd.rate)}</div></div>
     </div>
     <div class="bottom">
@@ -45,7 +48,7 @@ export function fdCard(fd, today) {
 
 export function render({ root, query }) {
   const today = todayISO();
-  if (query.get('person')) { ui.person = query.get('person'); ui.status = 'active'; }
+  if (query.get('person')) { ui.person = query.get('person'); ui.rel = query.get('rel') || 'any'; ui.status = 'active'; }
   const instFilter = query.get('inst') || '';
   const nomineeFilter = query.get('filter') === 'nonominee';
 
@@ -62,6 +65,7 @@ export function render({ root, query }) {
         <div class="field"><label for="sort">Sort by</label><select class="input" id="sort">
           ${SORTS.map(([id, l]) => `<option value="${id}" ${ui.sort === id ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       </div>
+      <div class="filters ${ui.person ? '' : 'hidden'}" id="rel" role="group" aria-label="Which FDs of this person">${RELS.map(([id, l]) => `<button class="chip ${ui.rel === id ? 'on' : ''}" data-rel="${id}" aria-pressed="${ui.rel === id}">${l}</button>`).join('')}</div>
       <div class="stack-sm" id="items"></div>
     </div>`;
 
@@ -75,10 +79,14 @@ export function render({ root, query }) {
         if (ui.status === 'due' && st !== 'due') return false;
         if (ui.status === 'old' && f.status === 'active') return false;
       } else if (f.status !== 'active' || f.hasNominee) return false;
-      if (ui.person && f.holderId !== ui.person && !f.jointHolderIds.includes(ui.person)) return false;
+      if (ui.person) {
+        const inName = f.holderId === ui.person || f.jointHolderIds.includes(ui.person);
+        const isFor = meantForId(f) === ui.person;
+        if (ui.rel === 'name' ? !inName : ui.rel === 'for' ? !isFor : !inName && !isFor) return false;
+      }
       if (instFilter && f.institutionName.trim().toLowerCase().replace(/\s+/g, ' ') !== instFilter) return false;
       if (q) {
-        const hay = [f.institutionName, f.branch, f.fdNumber, personName(f.holderId), ...f.jointHolderIds.map(personName), f.notes, typeLabel(f.institutionType), ...f.nominees.map((n) => n.name)].join(' ').toLowerCase();
+        const hay = [f.institutionName, f.branch, f.fdNumber, personName(f.holderId), personName(meantForId(f)), f.purpose, ...f.jointHolderIds.map(personName), f.notes, typeLabel(f.institutionType), ...f.nominees.map((n) => n.name)].join(' ').toLowerCase();
         if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
       }
       return true;
@@ -101,7 +109,12 @@ export function render({ root, query }) {
   draw();
 
   root.querySelector('#q').addEventListener('input', (e) => { ui.q = e.target.value; draw(); });
-  root.querySelector('#person').addEventListener('change', (e) => { ui.person = e.target.value; draw(); });
+  root.querySelector('#person').addEventListener('change', (e) => { ui.person = e.target.value; root.querySelector('#rel').classList.toggle('hidden', !ui.person); draw(); });
+  root.querySelectorAll('[data-rel]').forEach((b) => b.addEventListener('click', () => {
+    ui.rel = b.dataset.rel;
+    root.querySelectorAll('[data-rel]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+    draw();
+  }));
   root.querySelector('#sort').addEventListener('change', (e) => { ui.sort = e.target.value; draw(); });
   root.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', () => {
     ui.status = b.dataset.status;

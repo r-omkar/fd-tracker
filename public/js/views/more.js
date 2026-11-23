@@ -190,7 +190,8 @@ export async function render({ root }) {
 export function renderPeople({ root }) {
   const counts = (id) => {
     const fds = state.fds.filter((f) => f.status === 'active' && (f.holderId === id || f.jointHolderIds.includes(id)));
-    return { n: fds.length, amt: fds.filter((f) => f.holderId === id).reduce((s, f) => s + f.amount, 0) };
+    const forThem = state.fds.filter((f) => f.status === 'active' && (f.intendedForId || f.holderId) === id);
+    return { n: fds.length, amt: fds.filter((f) => f.holderId === id).reduce((s, f) => s + f.amount, 0), forAmt: forThem.reduce((s, f) => s + f.amount, 0), forN: forThem.length };
   };
   root.innerHTML = `
     <a class="back" href="#/more">${icon('back')} More</a>
@@ -200,7 +201,7 @@ export function renderPeople({ root }) {
         const c = counts(p.id);
         return `<div class="spread">
           <div style="min-width:0"><b>${esc(p.name)}</b>
-            <div class="ink2 small">${c.n ? `${c.n} active FD${c.n > 1 ? 's' : ''}${c.amt ? ` · ${fmtShort(c.amt)}` : ''}` : 'No active FDs'}</div></div>
+            <div class="ink2 small">${c.n ? `${c.n} FD${c.n > 1 ? 's' : ''} in their name${c.amt ? ` · ${fmtShort(c.amt)}` : ''}` : 'No FDs in their name'}${c.forN && c.forAmt !== c.amt ? `<br>Meant for them: ${fmtShort(c.forAmt)}` : ''}</div></div>
           <div class="row" style="gap:.25rem"><a class="btn small" href="#/fds?person=${p.id}">FDs</a><button class="btn quiet small" data-edit="${p.id}">Edit</button></div>
         </div>`;
       }).join('')}</div></div>` : `<div class="card"><div class="empty">${icon('people')}<p>No family members yet.</p></div></div>`}

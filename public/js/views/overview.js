@@ -3,13 +3,16 @@ import {
   todayISO, effectiveStatus, daysBetween, maturityValue, fmtINR, fmtShort, fmtRate, fmtDate, fmtDaysLeft, fmtMonth, monthShort,
   addMonths, typeInsurance, accruedValue, DICGC_LIMIT, fyBounds, interestBetween, periodicPayout,
 } from '../calc.js';
+import { meantForId, isForSomeoneElse } from '../calc.js';
+
+let personView = 'name'; // 'name' = whose name the FD is in, 'for' = who it is meant for
 
 const instKey = (n) => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 export function fdLine(fd, today) {
   const left = daysBetween(today, fd.maturityDate);
   return `<a href="#/fd/${fd.id}">
-    <div><div style="font-weight:650">${esc(fd.institutionName)}</div><div class="ink2 small">${esc(personName(fd.holderId))} · ${fmtDate(fd.maturityDate)}</div></div>
+    <div><div style="font-weight:650">${esc(fd.institutionName)}</div><div class="ink2 small">${esc(personName(fd.holderId))}${isForSomeoneElse(fd) ? ` → for ${esc(personName(meantForId(fd)))}` : ''} · ${fmtDate(fd.maturityDate)}</div></div>
     <div style="text-align:right"><div class="num" style="font-weight:700">${fmtINR(maturityValue(fd))}</div><div class="small" style="font-weight:600">${fmtDaysLeft(left)}</div></div>
   </a>`;
 }
@@ -66,7 +69,8 @@ export function render({ root }) {
     }
     return [...m.values()].sort((a, b) => b.value - a.value);
   };
-  const byPerson = group((f) => f.holderId, (f) => personName(f.holderId));
+  const byPerson = personView === 'for' ? group(meantForId, (f) => personName(meantForId(f))) : group((f) => f.holderId, (f) => personName(f.holderId));
+  const forOthers = active.filter(isForSomeoneElse);
   let byInst = group((f) => instKey(f.institutionName), (f) => f.institutionName.trim());
   if (byInst.length > 7) {
     const rest = byInst.slice(6);
@@ -175,7 +179,9 @@ export function render({ root }) {
 
       <section class="card" aria-labelledby="h-person">
         <div class="card-head"><h2 id="h-person">By family member</h2><span class="muted small">amount invested</span></div>
-        ${barList(byPerson, (r) => `#/fds?person=${r.key}`)}
+        ${forOthers.length ? `<div class="seg" role="group" aria-label="Group by" style="margin:-.25rem 0 1rem">${[['name', 'In whose name'], ['for', 'Meant for']].map(([v, l]) => `<button data-pv="${v}" class="${personView === v ? 'on' : ''}" aria-pressed="${personView === v}">${l}</button>`).join('')}</div>` : ''}
+        ${barList(byPerson, (r) => `#/fds?person=${r.key}&rel=${personView}`)}
+        ${forOthers.length ? `<p class="muted small" style="margin-top:.85rem">${forOthers.length} FD${forOthers.length > 1 ? 's' : ''} worth ${fmtShort(forOthers.reduce((s, f) => s + f.amount, 0))} ${forOthers.length > 1 ? 'are' : 'is'} in one person's name but meant for someone else.</p>` : ''}
       </section>
 
       <section class="card" aria-labelledby="h-tl">
@@ -220,5 +226,11 @@ export function render({ root }) {
       : `<p class="muted">No FDs mature in ${fmtMonth(m + '-01')}.</p>`;
   };
   root.querySelectorAll('.tl-col').forEach((b) => b.addEventListener('click', () => showMonth(b.dataset.m)));
+  root.querySelectorAll('[data-pv]').forEach((b) => b.addEventListener('click', () => {
+    personView = b.dataset.pv;
+    const y = window.scrollY;
+    render({ root });
+    window.scrollTo(0, y);
+  }));
   showMonth(selMonth);
 }

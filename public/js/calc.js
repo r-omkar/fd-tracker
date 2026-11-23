@@ -39,6 +39,10 @@ export const STATUSES = [
 ];
 
 export const DICGC_LIMIT = 500000;
+
+// The person an FD is kept for. Usually the holder; can be someone else (e.g. in Aaji's name, for Rahul).
+export const meantForId = (fd) => fd.intendedForId || fd.holderId;
+export const isForSomeoneElse = (fd) => !!fd.intendedForId && fd.intendedForId !== fd.holderId;
 export const SOON_DAYS = 30;
 
 // ---------- dates ----------

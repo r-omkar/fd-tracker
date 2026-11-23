@@ -297,3 +297,4 @@ html { scroll-padding-bottom: 90px; }
 input[type='date'].input { display: block; width: 100%; }
 body { overflow-x: hidden; }
 .stack > *, .stack-sm > *, .bars > *, .mini-list > * > div:first-child { min-width: 0; }
+.for-line { margin-top: 0.15rem; color: var(--accent); font-size: 0.9rem; font-weight: 600; }

@@ -1,5 +1,5 @@
 // FD Tracker service worker: makes the app work offline and shows maturity alerts.
-const VERSION = 'fd-v4';
+const VERSION = 'fd-v5';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/calc.js', 'js/db.js', 'js/backup.js', 'js/excel.js', 'js/alerts.js',
